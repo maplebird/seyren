@@ -26,6 +26,9 @@ import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonToken;
 import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -75,6 +78,7 @@ public class StrideNotificationService implements NotificationService {
         parameters.add(new BasicNameValuePair("audience", "api.atlassian.com"));
         post = new HttpPost(url);
         post.setHeader("content-type", "application/x-www-form-urlencoded");
+
         try {
             post.setEntity(new UrlEncodedFormEntity(parameters));
             if (LOGGER.isDebugEnabled()) {
@@ -93,9 +97,23 @@ public class StrideNotificationService implements NotificationService {
             LOGGER.debug("Access token response has been successfully generated.  Response data: " + accessToken);
 
             if (responseCode == 200) {
+                JsonFactory factory = new JsonFactory();
+                JsonParser parser = factory.createParser(responseBody);
 
-                accessToken = entity.toString();
-                System.out.println(responseBody);
+                while (!parser.isClosed()) {
+                    JsonToken jsonToken = parser.nextToken();
+
+                    if (JsonToken.FIELD_NAME.equals(jsonToken)) {
+                        String fieldName = parser.getCurrentName();
+                        jsonToken = parser.nextToken();
+                        if("access_token".equals(fieldName)) {
+                            accessToken = parser.getValueAsString();
+                        }
+                        if (LOGGER.isDebugEnabled()) {
+                            LOGGER.debug("Stride access token generated. Token: ", accessToken);
+                        }
+                    }
+                }
             }
 
 
@@ -116,6 +134,7 @@ public class StrideNotificationService implements NotificationService {
 
     public void sendNotification(Check check, Subscription subscription, List<Alert> alerts) throws NotificationFailedException {
         String accessToken = getAccessToken();
+        System.out.println(accessToken);
         String from = "Test";
 
 //        String[] conversationIds = subscription.getTarget().split(",");
