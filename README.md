@@ -12,6 +12,7 @@ Seyren ([/ˈsaɪ.rʌn/](http://en.wikipedia.org/wiki/Wikipedia:IPA_for_English#K
 [Pushover](https://pushover.net),
 [SLF4J](http://www.slf4j.org),
 [Slack](https://www.slack.com),
+[Stride](https://www.stride.com),
 [SNMP](http://en.wikipedia.org/wiki/Simple_Network_Management_Protocol),
 [Twilio](https://www.twilio.com/)
 
@@ -129,6 +130,11 @@ The target for a Slack subscription will be the channel name (including the `#`,
 * `SNMP_PORT` - The SNMP port. Default: `162`
 * `SNMP_COMMUNITY` - The SNMP  community. Default: `public`
 * `SNMP_OID` - The SNMP OID. Default: `1.3.6.1.4.1.32473.1`
+
+##### [Stride](https://www.stride.com)
+* `STRIDE_BASE_URL` - The hipchat api auth token. Default: ``
+* `STRIDE_CLIENT_ID` - The client ID 
+* `STRIDE_CLIENT_SECRET` - Allow the use of HipChat's API for compatibility reasons. Default: `false`
 
 ##### [TEMPLATE](http://en.wikipedia.org/wiki/Apache_Velocity)
 * `TEMPLATE_EMAIL_FILE_PATH` - The path to the velocity template used when emailing an alert. Seyren will first attempt to load from the class path, but will fall back to loading from the filesystem.  Default: `com/seyren/core/service/notification/email-template.vm"`

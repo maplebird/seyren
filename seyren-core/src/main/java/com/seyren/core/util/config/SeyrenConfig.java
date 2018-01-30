@@ -28,6 +28,7 @@ import org.apache.velocity.runtime.RuntimeConstants;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.seyren.core.util.velocity.Slf4jLogChute;
+import org.python.antlr.ast.Str;
 
 @Named
 public class SeyrenConfig {
@@ -57,6 +58,9 @@ public class SeyrenConfig {
     private final String hipChatAuthToken;
     private final String hipChatUsername;
     private final String hipChatUseV1Api;
+    private final String strideBaseUrl;
+    private final String strideClientId;
+    private final String strideClientSecret;
     private final String hubotUrl;
     private final String smtpFrom;
     private final String smtpUsername;
@@ -124,7 +128,12 @@ public class SeyrenConfig {
         this.hipChatAuthToken = configOrDefault(list("HIPCHAT_AUTHTOKEN", "HIPCHAT_AUTH_TOKEN"), "");
         this.hipChatUsername = configOrDefault(list("HIPCHAT_USERNAME", "HIPCHAT_USER_NAME"), "Seyren Alert");
         this.hipChatUseV1Api = configOrDefault(list("HIPCHAT_USE_V1_API", "HIPCHAT_USE_OLD_API", "HIPCHAT_USE_V1"), "false");
-        
+
+        // Stride
+        this.strideBaseUrl = configOrDefault(list("STRIDE_BASEURL", "STRIDE_BASE_URL"), "https://api.atlassian.com");
+        this.strideClientId = configOrDefault(list("STRIDE_CLIENTID", "STRIDE_CLIENT_ID", "STRIDE_ID"), "");
+        this.strideClientSecret = configOrDefault(list("STRIDE_CLIENT_SECRET", "STRIDE_SECRET"), "");
+
         // PagerDuty
 
         // Twilio
@@ -243,7 +252,22 @@ public class SeyrenConfig {
     public boolean getHipChatUseV1Api() {
         return Boolean.valueOf(hipChatUseV1Api);
     }
-    
+
+    @JsonIgnore
+    public String getStrideBaseUrl() {
+        return strideBaseUrl;
+    }
+
+    @JsonIgnore
+    public String getStrideClientId() {
+        return strideClientId;
+    }
+
+    @JsonIgnore
+    public String getStrideClientSecret() {
+        return strideClientSecret;
+    }
+
     @JsonIgnore
     public String getHubotUrl() {
         return hubotUrl;
