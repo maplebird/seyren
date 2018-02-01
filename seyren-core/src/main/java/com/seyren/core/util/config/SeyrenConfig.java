@@ -61,6 +61,7 @@ public class SeyrenConfig {
     private final String strideBaseUrl;
     private final String strideClientId;
     private final String strideClientSecret;
+    private final String strideCloudId;
     private final String hubotUrl;
     private final String smtpFrom;
     private final String smtpUsername;
@@ -133,6 +134,7 @@ public class SeyrenConfig {
         this.strideBaseUrl = configOrDefault(list("STRIDE_BASEURL", "STRIDE_BASE_URL"), "https://api.atlassian.com");
         this.strideClientId = configOrDefault(list("STRIDE_CLIENTID", "STRIDE_CLIENT_ID", "STRIDE_ID"), "");
         this.strideClientSecret = configOrDefault(list("STRIDE_CLIENT_SECRET", "STRIDE_SECRET"), "");
+        this.strideCloudId = configOrDefault(list("STRIDE_CLOUD_ID", "STRIDE_CLOUDID"), "");
 
         // PagerDuty
 
@@ -266,6 +268,11 @@ public class SeyrenConfig {
     @JsonIgnore
     public String getStrideClientSecret() {
         return strideClientSecret;
+    }
+
+    @JsonIgnore
+    public String getStrideCloudId() {
+        return strideCloudId;
     }
 
     @JsonIgnore

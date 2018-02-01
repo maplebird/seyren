@@ -20,6 +20,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.client.HttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.impl.client.BasicResponseHandler;
@@ -29,6 +30,7 @@ import org.apache.http.util.EntityUtils;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonToken;
+import org.python.antlr.ast.Str;
 import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -48,18 +50,46 @@ public class StrideNotificationService implements NotificationService {
 
     private final SeyrenConfig seyrenConfig;
     private final String baseUrl;
+    private final String cloudId;
 
     @Inject
     public StrideNotificationService(SeyrenConfig seyrenConfig) {
         this.seyrenConfig = seyrenConfig;
         this.baseUrl = seyrenConfig.getStrideBaseUrl();
+        this.cloudId = seyrenConfig.getStrideCloudId();
     }
 
-    protected StrideNotificationService(SeyrenConfig seyrenConfig, String baseUrl) {
+    protected StrideNotificationService(SeyrenConfig seyrenConfig, String baseUrl, String cloudId) {
         this.seyrenConfig = seyrenConfig;
         this.baseUrl = baseUrl;
+        this.cloudId = cloudId;
     }
-    
+
+    private String getJsonValue(String jsonData, String keyName){
+        String value = "";
+        try {
+            JsonFactory factory = new JsonFactory();
+            JsonParser parser = factory.createParser(jsonData);
+            while (!parser.isClosed()) {
+                JsonToken jsonToken = parser.nextToken();
+
+                if (JsonToken.FIELD_NAME.equals(jsonToken)) {
+                    String fieldName = parser.getCurrentName();
+                    parser.nextToken();
+                    if (keyName.equals(fieldName)) {
+                        value = parser.getValueAsString();
+                    }
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Stride access token generated. Token: ", keyName);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Error parsing response", e);
+        }
+        return value;
+    }
+
     private String getAccessToken() {
         LOGGER.info("Getting Stride access_token");
 
@@ -67,15 +97,15 @@ public class StrideNotificationService implements NotificationService {
         String clientSecret = seyrenConfig.getStrideClientSecret();
         String url = "https://auth.atlassian.com/oauth/token";
 
-        HttpClient client = HttpClientBuilder.create().useSystemProperties().build();
-        HttpPost post;
-        String accessToken = "";
-
         List<BasicNameValuePair> parameters = new ArrayList<BasicNameValuePair>();
         parameters.add(new BasicNameValuePair("client_id", clientId));
         parameters.add(new BasicNameValuePair("client_secret", clientSecret));
         parameters.add(new BasicNameValuePair("grant_type", "client_credentials"));
         parameters.add(new BasicNameValuePair("audience", "api.atlassian.com"));
+
+        HttpClient client = HttpClientBuilder.create().useSystemProperties().build();
+        HttpPost post;
+        String accessToken = "";
         post = new HttpPost(url);
         post.setHeader("content-type", "application/x-www-form-urlencoded");
 
@@ -90,33 +120,15 @@ public class StrideNotificationService implements NotificationService {
 
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.info("> parameters: {}", parameters);
-                LOGGER.debug("Status: {}, Body: {}", responseCode, responseBody);
+                LOGGER.debug("Access token response generated.  " +
+                        "Status: {}, Body: {}", responseCode, responseBody);
             }
-
-            HttpEntity entity = response.getEntity();
-            LOGGER.debug("Access token response has been successfully generated.  Response data: " + accessToken);
-
             if (responseCode == 200) {
-                JsonFactory factory = new JsonFactory();
-                JsonParser parser = factory.createParser(responseBody);
-
-                while (!parser.isClosed()) {
-                    JsonToken jsonToken = parser.nextToken();
-
-                    if (JsonToken.FIELD_NAME.equals(jsonToken)) {
-                        String fieldName = parser.getCurrentName();
-                        jsonToken = parser.nextToken();
-                        if("access_token".equals(fieldName)) {
-                            accessToken = parser.getValueAsString();
-                        }
-                        if (LOGGER.isDebugEnabled()) {
-                            LOGGER.debug("Stride access token generated. Token: ", accessToken);
-                        }
-                    }
-                }
+                accessToken = getJsonValue(responseBody, "access_token");
+            } else {
+                LOGGER.error("Could not generate Stride access token. Server response code: {}, response body: {}"
+                        + responseCode, responseBody);
             }
-
-
         } catch (Exception e) {
             LOGGER.warn("Error getting Access Token from Stride API", e);
         } finally {
@@ -127,15 +139,44 @@ public class StrideNotificationService implements NotificationService {
         return accessToken;
     }
 
-    private void conversationId() {
+    private String getConversationList(String cloudId, String accessToken){
+        String url = baseUrl + "/site/" + cloudId + "/conversation";
+        String conversationList = "";
+        LOGGER.info("Getting list of conversations");
 
+        HttpClient client = HttpClientBuilder.create().build();
+        HttpGet request = new HttpGet(url);
+        request.addHeader("authorization", "Bearer " + accessToken);
+        LOGGER.debug("Sending request for conversation list");
+
+        try {
+            HttpResponse response = client.execute(request);
+            int responseCode = response.getStatusLine().getStatusCode();
+            String responseBody = new BasicResponseHandler().handleResponse(response);
+            LOGGER.debug("Conversation list request response generated. Status: {}, Body: {}", responseCode, responseBody);
+            if (responseCode == 200) {
+                conversationList = responseBody;
+            } else {
+                LOGGER.error("Could not get list of conversations this bot is in. Server response code: {}, response body: {}"
+                        + responseCode, responseBody);
+            }
+            System.out.println("Response Code : " + responseCode);
+            System.out.println("Response Body : " + responseBody);
+        } catch (Exception e) {
+            LOGGER.warn("Error getting account information from Stride API", e);
+        }
+        return conversationList;
     }
 
 
+
     public void sendNotification(Check check, Subscription subscription, List<Alert> alerts) throws NotificationFailedException {
+        String targetChannel = "dev-monitoring";
         String accessToken = getAccessToken();
-        System.out.println(accessToken);
-        String from = "Test";
+        String conversationList = getConversationList(cloudId, accessToken);
+        System.out.println(conversationList);
+
+//        sendMessage("This is a seyren test", MessageColor.RANDOM, );
 
 //        String[] conversationIds = subscription.getTarget().split(",");
 //        try {
